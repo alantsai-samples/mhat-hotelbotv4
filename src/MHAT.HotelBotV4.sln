@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MHAT.HotelBotV4", "MHAT.HotelBotV4\MHAT.HotelBotV4.csproj", "{512AA40F-3B22-4AB5-8431-F0583542FBC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MHAT.HotelBotV4", "MHAT.HotelBotV4\MHAT.HotelBotV4.csproj", "{512AA40F-3B22-4AB5-8431-F0583542FBC4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
