@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using MHAT.HotelBotV4.Model;
 using Microsoft.Bot.Builder;
 
 namespace MHAT.HotelBotV4
@@ -19,9 +20,10 @@ namespace MHAT.HotelBotV4
         /// Contains the <see cref="ConversationState"/> and associated <see cref="IStatePropertyAccessor{T}"/>.
         /// </summary>
         /// <param name="conversationState">The state object that stores the counter.</param>
-        public EchoBotAccessors(ConversationState conversationState)
+        public EchoBotAccessors(ConversationState conversationState, UserState userState)
         {
             ConversationState = conversationState ?? throw new ArgumentNullException(nameof(conversationState));
+            UserState = userState ?? throw new ArgumentNullException(nameof(userState));
         }
 
         /// <summary>
@@ -31,6 +33,8 @@ namespace MHAT.HotelBotV4
         /// <value>The accessor name for the counter accessor.</value>
         public static string CounterStateName { get; } = $"{nameof(EchoBotAccessors)}.CounterState";
 
+        public static string UserInfoName { get; } = $"{nameof(EchoBotAccessors)}.UserInfoName";
+
         /// <summary>
         /// Gets or sets the <see cref="IStatePropertyAccessor{T}"/> for CounterState.
         /// </summary>
@@ -39,10 +43,14 @@ namespace MHAT.HotelBotV4
         /// </value>
         public IStatePropertyAccessor<CounterState> CounterState { get; set; }
 
+        public IStatePropertyAccessor<UserInfo> UserInfo { get; set; }
+
         /// <summary>
         /// Gets the <see cref="ConversationState"/> object for the conversation.
         /// </summary>
         /// <value>The <see cref="ConversationState"/> object.</value>
         public ConversationState ConversationState { get; }
+
+        public UserState UserState { get; }
     }
 }
