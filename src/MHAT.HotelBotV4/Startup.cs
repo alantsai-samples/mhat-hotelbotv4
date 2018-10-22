@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using MHAT.HotelBotV4.Model;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Bot.Builder;
@@ -110,6 +111,10 @@ namespace MHAT.HotelBotV4
                 var conversationState = new ConversationState(dataStore);
 
                 options.State.Add(conversationState);
+
+                var userState = new UserState(dataStore);
+
+                options.State.Add(userState);
             });
 
             // Create and register state accesssors.
@@ -128,11 +133,14 @@ namespace MHAT.HotelBotV4
                     throw new InvalidOperationException("ConversationState must be defined and added before adding conversation-scoped state accessors.");
                 }
 
+                var userState = options.State.OfType<UserState>().FirstOrDefault();
+
                 // Create the custom state accessor.
                 // State accessors enable other components to read and write individual properties of state.
-                var accessors = new EchoBotAccessors(conversationState)
+                var accessors = new EchoBotAccessors(conversationState, userState)
                 {
                     CounterState = conversationState.CreateProperty<CounterState>(EchoBotAccessors.CounterStateName),
+                    UserInfo = userState.CreateProperty<UserInfo>(EchoBotAccessors.UserInfoName)
                 };
 
                 return accessors;
