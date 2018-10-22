@@ -66,18 +66,46 @@ namespace MHAT.HotelBotV4
                 // Get the conversation state from the turn context.
                 var state = await _accessors.CounterState.GetAsync(turnContext, () => new CounterState());
 
-                // Bump the turn count for this conversation.
-                state.TurnCount++;
+                var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
 
-                // Set the property using the accessor.
-                await _accessors.CounterState.SetAsync(turnContext, state);
+                if (string.IsNullOrEmpty(userInfo.Name) 
+                        && state.CurrentConversationFlow == "askName")
+                {
+                    state.CurrentConversationFlow = "getName";
 
-                // Save the new turn count into the conversation state.
-                await _accessors.ConversationState.SaveChangesAsync(turnContext);
+                    await _accessors.CounterState.SetAsync(turnContext, state);
+                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
 
-                // Echo back to the user whatever they typed.
-                var responseMessage = $"Turn {state.TurnCount}: You sent '{turnContext.Activity.Text}'\n";
-                await turnContext.SendActivityAsync(responseMessage);
+                    await turnContext.SendActivityAsync("請問尊姓大名？");
+                }
+                else if(state.CurrentConversationFlow == "getName")
+                {
+                    userInfo.Name = turnContext.Activity.Text;
+                    state.CurrentConversationFlow = "done";
+
+                    await _accessors.UserInfo.SetAsync(turnContext, userInfo);
+                    await _accessors.UserState.SaveChangesAsync(turnContext);
+
+                    await _accessors.CounterState.SetAsync(turnContext, state);
+                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
+
+                    await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
+                }
+                else
+                {
+                    // Bump the turn count for this conversation.
+                    state.TurnCount++;
+
+                    // Set the property using the accessor.
+                    await _accessors.CounterState.SetAsync(turnContext, state);
+
+                    // Save the new turn count into the conversation state.
+                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
+
+                    // Echo back to the user whatever they typed.
+                    var responseMessage = $"Name: {userInfo.Name} Turn {state.TurnCount}: You sent '{turnContext.Activity.Text}'\n";
+                    await turnContext.SendActivityAsync(responseMessage);
+                }
             }
             else
             {

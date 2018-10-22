@@ -15,5 +15,7 @@ namespace MHAT.HotelBotV4
         /// </summary>
         /// <value>The number of turns in the conversation.</value>
         public int TurnCount { get; set; } = 0;
+
+        public string CurrentConversationFlow { get; set; } = "askName";
     }
 }
