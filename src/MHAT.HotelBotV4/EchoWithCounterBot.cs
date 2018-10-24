@@ -4,6 +4,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 
@@ -25,6 +26,8 @@ namespace MHAT.HotelBotV4
         private readonly EchoBotAccessors _accessors;
         private readonly ILogger _logger;
 
+        private readonly DialogSet _dialogs;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EchoWithCounterBot"/> class.
         /// </summary>
@@ -41,6 +44,9 @@ namespace MHAT.HotelBotV4
             _logger = loggerFactory.CreateLogger<EchoWithCounterBot>();
             _logger.LogTrace("EchoBot turn start.");
             _accessors = accessors ?? throw new System.ArgumentNullException(nameof(accessors));
+
+            _dialogs = new DialogSet(_accessors.DialogState);
+            _dialogs.Add(new TextPrompt("askName"));
         }
 
         /// <summary>
@@ -68,28 +74,30 @@ namespace MHAT.HotelBotV4
 
                 var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
 
+                var dialogContext = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
+                var dialogResult = await dialogContext.ContinueDialogAsync(cancellationToken);
+
                 if (string.IsNullOrEmpty(userInfo.Name) 
-                        && state.CurrentConversationFlow == "askName")
+                        && dialogResult.Status == DialogTurnStatus.Empty)
                 {
-                    state.CurrentConversationFlow = "getName";
+                    await dialogContext.PromptAsync(
+                            "askName",
+                            new PromptOptions
+                                { Prompt = MessageFactory.Text("請問尊姓大名？") },
+                            cancellationToken);
 
-                    await _accessors.CounterState.SetAsync(turnContext, state);
-                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
-
-                    await turnContext.SendActivityAsync("請問尊姓大名？");
                 }
-                else if(state.CurrentConversationFlow == "getName")
+                else if(dialogResult.Status == DialogTurnStatus.Complete)
                 {
-                    userInfo.Name = turnContext.Activity.Text;
-                    state.CurrentConversationFlow = "done";
+                    if (dialogResult.Result != null)
+                    {
+                        userInfo.Name = dialogResult.Result.ToString();
 
-                    await _accessors.UserInfo.SetAsync(turnContext, userInfo);
-                    await _accessors.UserState.SaveChangesAsync(turnContext);
+                        await _accessors.UserInfo.SetAsync(turnContext, userInfo);
+                        await _accessors.UserState.SaveChangesAsync(turnContext);
 
-                    await _accessors.CounterState.SetAsync(turnContext, state);
-                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
-
-                    await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
+                        await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
+                    }
                 }
                 else
                 {
@@ -100,7 +108,6 @@ namespace MHAT.HotelBotV4
                     await _accessors.CounterState.SetAsync(turnContext, state);
 
                     // Save the new turn count into the conversation state.
-                    await _accessors.ConversationState.SaveChangesAsync(turnContext);
 
                     // Echo back to the user whatever they typed.
                     var responseMessage = $"Name: {userInfo.Name} Turn {state.TurnCount}: You sent '{turnContext.Activity.Text}'\n";
@@ -111,6 +118,8 @@ namespace MHAT.HotelBotV4
             {
                 await turnContext.SendActivityAsync($"{turnContext.Activity.Type} event detected");
             }
+
+            await _accessors.ConversationState.SaveChangesAsync(turnContext);
         }
     }
 }
