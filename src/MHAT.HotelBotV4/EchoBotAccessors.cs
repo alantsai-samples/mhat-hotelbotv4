@@ -4,6 +4,7 @@
 using System;
 using MHAT.HotelBotV4.Model;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Dialogs;
 
 namespace MHAT.HotelBotV4
 {
@@ -35,6 +36,8 @@ namespace MHAT.HotelBotV4
 
         public static string UserInfoName { get; } = $"{nameof(EchoBotAccessors)}.UserInfoName";
 
+        public static string DialogStateName { get; } = $"{nameof(EchoBotAccessors)}.DialogState";
+
         /// <summary>
         /// Gets or sets the <see cref="IStatePropertyAccessor{T}"/> for CounterState.
         /// </summary>
@@ -44,6 +47,8 @@ namespace MHAT.HotelBotV4
         public IStatePropertyAccessor<CounterState> CounterState { get; set; }
 
         public IStatePropertyAccessor<UserInfo> UserInfo { get; set; }
+
+        public IStatePropertyAccessor<DialogState> DialogState { get; set; }
 
         /// <summary>
         /// Gets the <see cref="ConversationState"/> object for the conversation.
