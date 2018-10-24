@@ -7,6 +7,7 @@ using MHAT.HotelBotV4.Model;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Configuration;
@@ -140,7 +141,8 @@ namespace MHAT.HotelBotV4
                 var accessors = new EchoBotAccessors(conversationState, userState)
                 {
                     CounterState = conversationState.CreateProperty<CounterState>(EchoBotAccessors.CounterStateName),
-                    UserInfo = userState.CreateProperty<UserInfo>(EchoBotAccessors.UserInfoName)
+                    UserInfo = userState.CreateProperty<UserInfo>(EchoBotAccessors.UserInfoName),
+                    DialogState = conversationState.CreateProperty<DialogState>(EchoBotAccessors.DialogStateName)
                 };
 
                 return accessors;
