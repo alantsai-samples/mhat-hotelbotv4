@@ -183,29 +183,30 @@ namespace MHAT.HotelBotV4
 
                 var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
 
-                var dialogContext = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
-                var dialogResult = await dialogContext.ContinueDialogAsync(cancellationToken);
-
-                if (string.IsNullOrEmpty(userInfo.Name)
-                        && dialogResult.Status == DialogTurnStatus.Empty)
+                if (string.IsNullOrEmpty(userInfo.Name))
                 {
-                    await dialogContext.PromptAsync(
-                            "askName",
-                            new PromptOptions
-                            { Prompt = MessageFactory.Text("請問尊姓大名？") },
-                            cancellationToken);
+                    var dialogContext = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
+                    var dialogResult = await dialogContext.ContinueDialogAsync(cancellationToken);
 
-                }
-                else if (dialogResult.Status == DialogTurnStatus.Complete)
-                {
-                    if (dialogResult.Result != null)
+                    if (dialogResult.Status == DialogTurnStatus.Empty)
                     {
-                        userInfo.Name = dialogResult.Result.ToString();
+                        await dialogContext.PromptAsync(
+                                "askName",
+                                new PromptOptions
+                                { Prompt = MessageFactory.Text("請問尊姓大名？") },
+                                cancellationToken);
+                    }
+                    else if (dialogResult.Status == DialogTurnStatus.Complete)
+                    {
+                        if (dialogResult.Result != null)
+                        {
+                            userInfo.Name = dialogResult.Result.ToString();
 
-                        await _accessors.UserInfo.SetAsync(turnContext, userInfo);
-                        await _accessors.UserState.SaveChangesAsync(turnContext);
+                            await _accessors.UserInfo.SetAsync(turnContext, userInfo);
+                            await _accessors.UserState.SaveChangesAsync(turnContext);
 
-                        await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
+                            await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
+                        }
                     }
                 }
                 else
