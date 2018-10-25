@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using MHAT.HotelBotV4.Model;
+
 namespace MHAT.HotelBotV4
 {
     /// <summary>
@@ -17,5 +19,7 @@ namespace MHAT.HotelBotV4
         public int TurnCount { get; set; } = 0;
 
         public string CurrentConversationFlow { get; set; } = "askName";
+
+        public RoomReservation RoomReservation { get; set; }
     }
 }
