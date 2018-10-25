@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Dialogs.Choices;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 
@@ -59,32 +61,102 @@ namespace MHAT.HotelBotV4
                 GetStayDayAsync,
                 GetNumberOfOccupantAsync,
                 GetBedSizeAsync,
+                GetConfirmAsync,
+                GetSummaryAsync,
             };
 
             _dialogsWaterfall.Add(new WaterfallDialog("formFlow", waterfallSteps));
             _dialogsWaterfall.Add(new DateTimePrompt("dateTime"));
             _dialogsWaterfall.Add(new NumberPrompt<int>("number"));
             _dialogsWaterfall.Add(new ChoicePrompt("choice"));
+            _dialogsWaterfall.Add(new ConfirmPrompt("confirm"));
         }
 
-        private Task<DialogTurnResult> GetBedSizeAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        private async Task<DialogTurnResult> GetSummaryAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            if ((bool)stepContext.Result)
+            {
+                await stepContext.Context.SendActivityAsync
+                    ($"訂單下定完成，訂單號：{DateTime.Now.Ticks}");
+            }
+            else
+            {
+                await stepContext.Context.SendActivityAsync("已經取消訂單");
+            }
+
+            return await stepContext.EndDialogAsync(cancellationToken: cancellationToken);
         }
 
-        private Task<DialogTurnResult> GetNumberOfOccupantAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        private async Task<DialogTurnResult> GetConfirmAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            (await GetCounterState(stepContext.Context))
+                .RoomReservation.BedSize = (string)stepContext.Result;
+
+            return await stepContext.PromptAsync("confirm", new PromptOptions()
+            {
+                Prompt = MessageFactory.Text("親確認您的訂房條件：")
+            });
         }
 
-        private Task<DialogTurnResult> GetStayDayAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        private async Task<DialogTurnResult> GetBedSizeAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            (await GetCounterState(stepContext.Context))
+                .RoomReservation.NumberOfPepole = (int)stepContext.Result;
+
+            var choices = new List<Choice>()
+            {
+                new Choice("單人床"),
+                new Choice("雙人床"),
+            };
+
+            return await stepContext.PromptAsync("choice",
+                new PromptOptions()
+                {
+                    Prompt = MessageFactory.Text("請選擇床型"),
+                    Choices = choices,
+                },
+                cancellationToken);
         }
 
-        private Task<DialogTurnResult> GetStartStayDateAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        private async Task<DialogTurnResult> GetNumberOfOccupantAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            (await GetCounterState(stepContext.Context))
+                .RoomReservation.NumberOfNightToStay = (int)stepContext.Result - 1;
+
+            return await stepContext.PromptAsync("number",
+                new PromptOptions()
+                {
+                    Prompt = MessageFactory.Text("幾人入住"),
+                },
+                cancellationToken);
+        }
+
+        private async Task<DialogTurnResult> GetStayDayAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            (await GetCounterState(stepContext.Context))
+                .RoomReservation.StartDate = (DateTime) stepContext.Result;
+
+            return await stepContext.PromptAsync("number", new PromptOptions()
+            {
+                 Prompt = MessageFactory.Text("請輸入要住幾天"),
+            }, 
+            cancellationToken);
+        }
+
+        private async Task<DialogTurnResult> GetStartStayDateAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            return await stepContext.PromptAsync("datetime",
+                new PromptOptions()
+                {
+                    Prompt = MessageFactory.Text("請輸入入住日期"),
+                },
+                cancellationToken);
         }
 
         /// <summary>
@@ -107,25 +179,24 @@ namespace MHAT.HotelBotV4
             // see https://aka.ms/about-bot-activity-message to learn more about the message and other activity types
             if (turnContext.Activity.Type == ActivityTypes.Message)
             {
-                // Get the conversation state from the turn context.
-                var state = await _accessors.CounterState.GetAsync(turnContext, () => new CounterState());
+                CounterState state = await GetCounterState(turnContext);
 
                 var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
 
                 var dialogContext = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
                 var dialogResult = await dialogContext.ContinueDialogAsync(cancellationToken);
 
-                if (string.IsNullOrEmpty(userInfo.Name) 
+                if (string.IsNullOrEmpty(userInfo.Name)
                         && dialogResult.Status == DialogTurnStatus.Empty)
                 {
                     await dialogContext.PromptAsync(
                             "askName",
                             new PromptOptions
-                                { Prompt = MessageFactory.Text("請問尊姓大名？") },
+                            { Prompt = MessageFactory.Text("請問尊姓大名？") },
                             cancellationToken);
 
                 }
-                else if(dialogResult.Status == DialogTurnStatus.Complete)
+                else if (dialogResult.Status == DialogTurnStatus.Complete)
                 {
                     if (dialogResult.Result != null)
                     {
@@ -158,6 +229,12 @@ namespace MHAT.HotelBotV4
             }
 
             await _accessors.ConversationState.SaveChangesAsync(turnContext);
+        }
+
+        private async Task<CounterState> GetCounterState(ITurnContext turnContext)
+        {
+            // Get the conversation state from the turn context.
+            return await _accessors.CounterState.GetAsync(turnContext, () => new CounterState());
         }
     }
 }
