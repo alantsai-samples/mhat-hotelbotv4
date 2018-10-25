@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
@@ -28,6 +29,8 @@ namespace MHAT.HotelBotV4
 
         private readonly DialogSet _dialogs;
 
+        private readonly DialogSet _dialogsWaterfall;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="EchoWithCounterBot"/> class.
         /// </summary>
@@ -47,6 +50,41 @@ namespace MHAT.HotelBotV4
 
             _dialogs = new DialogSet(_accessors.DialogState);
             _dialogs.Add(new TextPrompt("askName"));
+
+            _dialogsWaterfall = new DialogSet(_accessors.DialogState);
+
+            var waterfallSteps = new WaterfallStep[]
+            {
+                GetStartStayDateAsync,
+                GetStayDayAsync,
+                GetNumberOfOccupantAsync,
+                GetBedSizeAsync,
+            };
+
+            _dialogsWaterfall.Add(new WaterfallDialog("formFlow", waterfallSteps));
+            _dialogsWaterfall.Add(new DateTimePrompt("dateTime"));
+            _dialogsWaterfall.Add(new NumberPrompt<int>("number"));
+            _dialogsWaterfall.Add(new ChoicePrompt("choice"));
+        }
+
+        private Task<DialogTurnResult> GetBedSizeAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task<DialogTurnResult> GetNumberOfOccupantAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task<DialogTurnResult> GetStayDayAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task<DialogTurnResult> GetStartStayDateAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
