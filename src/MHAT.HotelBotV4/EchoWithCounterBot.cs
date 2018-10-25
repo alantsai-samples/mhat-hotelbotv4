@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
@@ -91,12 +92,15 @@ namespace MHAT.HotelBotV4
         private async Task<DialogTurnResult> GetConfirmAsync
             (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            (await GetCounterState(stepContext.Context))
-                .RoomReservation.BedSize = (string)stepContext.Result;
+            var roomReservation = (await GetCounterState(stepContext.Context))
+                .RoomReservation;
+
+            roomReservation.BedSize = ((FoundChoice)stepContext.Result).Value;
 
             return await stepContext.PromptAsync("confirm", new PromptOptions()
             {
-                Prompt = MessageFactory.Text("親確認您的訂房條件：")
+                Prompt = MessageFactory.Text($"請確認您的訂房條件：{Environment.NewLine}" +
+                $"{roomReservation}")
             });
         }
 
@@ -139,7 +143,8 @@ namespace MHAT.HotelBotV4
             (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
             (await GetCounterState(stepContext.Context))
-                .RoomReservation.StartDate = (DateTime) stepContext.Result;
+                .RoomReservation.StartDate =
+                DateTime.Parse(((List<DateTimeResolution>)stepContext.Result).First().Value);
 
             return await stepContext.PromptAsync("number", new PromptOptions()
             {
@@ -151,7 +156,7 @@ namespace MHAT.HotelBotV4
         private async Task<DialogTurnResult> GetStartStayDateAsync
             (WaterfallStepContext stepContext, CancellationToken cancellationToken)
         {
-            return await stepContext.PromptAsync("datetime",
+            return await stepContext.PromptAsync("dateTime",
                 new PromptOptions()
                 {
                     Prompt = MessageFactory.Text("請輸入入住日期"),
@@ -183,31 +188,17 @@ namespace MHAT.HotelBotV4
 
                 var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
 
-                if (string.IsNullOrEmpty(userInfo.Name))
+                var dialogWaterfallContext = await _dialogsWaterfall.CreateContextAsync(turnContext, cancellationToken);
+                var waterfallResult = await dialogWaterfallContext.ContinueDialogAsync(cancellationToken);
+
+                if(turnContext.Activity.Text == "訂房")
                 {
-                    var dialogContext = await _dialogs.CreateContextAsync(turnContext, cancellationToken);
-                    var dialogResult = await dialogContext.ContinueDialogAsync(cancellationToken);
+                    await dialogWaterfallContext.BeginDialogAsync("formFlow",
+                        null, cancellationToken);
+                }
+                else if(waterfallResult.Status != DialogTurnStatus.Empty)
+                {
 
-                    if (dialogResult.Status == DialogTurnStatus.Empty)
-                    {
-                        await dialogContext.PromptAsync(
-                                "askName",
-                                new PromptOptions
-                                { Prompt = MessageFactory.Text("請問尊姓大名？") },
-                                cancellationToken);
-                    }
-                    else if (dialogResult.Status == DialogTurnStatus.Complete)
-                    {
-                        if (dialogResult.Result != null)
-                        {
-                            userInfo.Name = dialogResult.Result.ToString();
-
-                            await _accessors.UserInfo.SetAsync(turnContext, userInfo);
-                            await _accessors.UserState.SaveChangesAsync(turnContext);
-
-                            await turnContext.SendActivityAsync($"{userInfo.Name} 您好");
-                        }
-                    }
                 }
                 else
                 {

@@ -20,6 +20,6 @@ namespace MHAT.HotelBotV4
 
         public string CurrentConversationFlow { get; set; } = "askName";
 
-        public RoomReservation RoomReservation { get; set; }
+        public RoomReservation RoomReservation { get; set; } = new RoomReservation();
     }
 }
