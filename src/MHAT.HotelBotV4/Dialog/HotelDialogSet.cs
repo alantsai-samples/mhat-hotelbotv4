@@ -47,6 +47,64 @@ namespace MHAT.HotelBotV4.Dialog
             Add(new NumberPrompt<int>("number"));
             Add(new ChoicePrompt("choice"));
             Add(new ConfirmPrompt("confirm"));
+
+            var rootSteps = new WaterfallStep[]
+            {
+                StartRootAsync,
+                ProcessRootAsync,
+                LoopRootAsync,
+            };
+
+            Add(new WaterfallDialog("root", rootSteps));
+        }
+
+        private async Task<DialogTurnResult> LoopRootAsync
+            (WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            return await stepContext.ReplaceDialogAsync("root", null, cancellationToken);
+        }
+
+        private async Task<DialogTurnResult> ProcessRootAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            var userInfo = await _accessors.UserInfo.GetAsync(
+                stepContext.Context, () => new Model.UserInfo());
+
+            if (string.IsNullOrEmpty(userInfo.Name))
+            {
+                return await stepContext.BeginDialogAsync(
+                    askNameWaterfall, null, cancellationToken);
+            }
+            else if (stepContext.Result.ToString() == "訂房")
+            {
+                return await stepContext.BeginDialogAsync(
+                    "bookRoom", null, cancellationToken);
+            }
+            else
+            {
+                CounterState state = await GetCounterState(stepContext.Context);
+
+                state.TurnCount++;
+
+                // Set the property using the accessor.
+                await _accessors.CounterState.SetAsync(stepContext.Context, state);
+
+                // Save the new turn count into the conversation state.
+
+                // Echo back to the user whatever they typed.
+                var responseMessage = $"Name: {userInfo.Name} Turn {state.TurnCount}: You sent '{stepContext.Result}'\n";
+                await stepContext.Context.SendActivityAsync(responseMessage);
+
+                return await stepContext.ContinueDialogAsync(cancellationToken);
+            }
+        }
+
+        private async Task<DialogTurnResult> StartRootAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
+        {
+            return await stepContext.PromptAsync("textPrompt", new PromptOptions()
+            {
+                Prompt = MessageFactory.Text("您好，能夠幫到您什麽？"),
+            },
+            cancellationToken);
         }
 
         #region askName
