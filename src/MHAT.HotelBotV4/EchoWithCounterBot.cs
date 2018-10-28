@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MHAT.HotelBotV4.Dialog;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Dialogs.Choices;
@@ -30,9 +31,7 @@ namespace MHAT.HotelBotV4
         private readonly EchoBotAccessors _accessors;
         private readonly ILogger _logger;
 
-        private readonly DialogSet _dialogs;
-
-        private readonly DialogSet _dialogsWaterfall;
+        private readonly HotelDialogSet _dialogs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EchoWithCounterBot"/> class.
@@ -50,6 +49,8 @@ namespace MHAT.HotelBotV4
             _logger = loggerFactory.CreateLogger<EchoWithCounterBot>();
             _logger.LogTrace("EchoBot turn start.");
             _accessors = accessors ?? throw new System.ArgumentNullException(nameof(accessors));
+
+            _dialogs = new HotelDialogSet(_accessors.DialogState, accessors);
         }
 
         /// <summary>
@@ -72,35 +73,15 @@ namespace MHAT.HotelBotV4
             // see https://aka.ms/about-bot-activity-message to learn more about the message and other activity types
             if (turnContext.Activity.Type == ActivityTypes.Message)
             {
-                CounterState state = await GetCounterState(turnContext);
+                var dc = await _dialogs.CreateContextAsync(
+                    turnContext, cancellationToken);
 
-                var userInfo = await _accessors.UserInfo.GetAsync(turnContext, () => new Model.UserInfo());
+                await dc.ContinueDialogAsync(cancellationToken);
 
-                var dialogWaterfallContext = await _dialogsWaterfall.CreateContextAsync(turnContext, cancellationToken);
-                var waterfallResult = await dialogWaterfallContext.ContinueDialogAsync(cancellationToken);
-
-                if(turnContext.Activity.Text == "訂房")
+                if (!turnContext.Responded)
                 {
-                    await dialogWaterfallContext.BeginDialogAsync("formFlow",
-                        null, cancellationToken);
-                }
-                else if(waterfallResult.Status != DialogTurnStatus.Empty)
-                {
-
-                }
-                else
-                {
-                    // Bump the turn count for this conversation.
-                    state.TurnCount++;
-
-                    // Set the property using the accessor.
-                    await _accessors.CounterState.SetAsync(turnContext, state);
-
-                    // Save the new turn count into the conversation state.
-
-                    // Echo back to the user whatever they typed.
-                    var responseMessage = $"Name: {userInfo.Name} Turn {state.TurnCount}: You sent '{turnContext.Activity.Text}'\n";
-                    await turnContext.SendActivityAsync(responseMessage);
+                    await dc.BeginDialogAsync
+                        ("root", null, cancellationToken);
                 }
             }
             else
